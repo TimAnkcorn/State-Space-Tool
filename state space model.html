@@ -1,0 +1,727 @@
+<html>
+<head>
+
+<script type="text/javascript" src="..\jsLibrary\graphs.js"></script>
+<script type="text/javascript" src="..\jsLibrary\matrix.js"></script>
+<script type="text/javascript">
+
+//dim x(t)[.]=n
+//dim y(t)=q
+//dim u(t)=p
+//dim A[.]=nxn
+//dim U[.]=nxp
+//dim C[.]=qxn
+//dim D[.]=qxp
+
+var updateDynamic=setInterval(function(){updateIfChanged()},1000);
+changed=false;
+
+var tend = 10;
+var h = 0.005;
+
+
+n=3;
+p=3;
+q=3;
+iMethod="euler"
+
+A= new Array();
+A[0]=new Array();
+A[1]=new Array();
+A[2]=new Array();
+
+A[0]=[-1, 0, 0];
+A[1]=[0, -1, 0];
+A[2]=[0, 0, -1];
+
+B= new Array();
+B[0]=new Array();
+B[1]=new Array();
+B[2]=new Array();
+B[0]=[1, 0, 0];
+B[1]=[0, 1, 0];
+B[2]=[0, 0, 1];
+
+C= new Array();
+C[0]=new Array();
+C[1]=new Array();
+C[2]=new Array();
+C[0]=[1, 0, 0];
+C[1]=[0, 1, 0];
+C[2]=[0, 0, 1];
+
+D= new Array();
+D[0]=new Array();
+D[1]=new Array();
+D[2]=new Array();
+D[0]=[1, 0, 0];
+D[1]=[0, 1, 0];
+D[2]=[0, 0, 1];
+
+X0= new Array();
+X0[0]=new Array();
+X0[1]=new Array();
+X0[2]=new Array();
+X0[0]=[0];
+X0[1]=[0];
+X0[2]=[0];
+
+Utype=new Array();
+Utype=["step","step","ramp"]
+
+U=new Array();
+U[0]=new Array(0);
+U[1]=new Array(1);
+U[2]=new Array(2);
+U[0]=[1,0,0];
+U[1]=[1,0,0];
+U[2]=[1,0,0];
+UCol=["#FF0000","#00FF00","#000000"];
+
+</script>
+
+<style>
+h1 {font-weight: normal;}
+h2 {font-weight: normal;}
+</style>
+
+</head>
+
+<body>
+
+<script type="text/javascript">
+</script>
+
+<table border="1" >
+<tr>
+<th align="center" colspan="10">State Space Simulation</th>
+<th><input type="button" onclick="ssWrite()" value="write file"></th>
+</tr>
+<tr>
+
+<th align="center" >Time step (s):</th>
+<th align="center" onmousedown="h=changeNumber(this.id)" id="time step">0.05</th>
+<th align="center" >Integ method :</th>  
+<th align="center" >
+<select id="integMethod" onchange="iMethod=changeSelected(this.id)">
+  <option selected>euler</option>
+  <option>heun</option>
+  <option>kutta3</option>
+  <option>rk4</option>
+  <option>kutta 3/8</option>
+</select>
+</th>
+<th align="center" >End time (s):</th>
+<th align="center" onmousedown="tend=changeNumber(this.id)" id="end time">10</th>
+<th><input type="button" onclick="ssRead()" value="read file"></th>
+</tr>
+</table>
+<table>
+<tr></tr>
+<tr>
+<th style="text-decoration: underline;">d[x(t)]</th>
+<th rowspan=2>=[A][x(t)]+[B][u(t)]</th>
+<th align="right">n, number of states :</th>
+<td>
+<select onchange="changeN(this.id)" id="change N">
+	<option>1</option>
+	<option>2</option>
+	<option selected>3</option>
+	<option>4</option>
+	<option>5</option>
+</select>
+</td>
+<th align="right">p, number of inputs :</th>
+<td>
+<select onchange="changeP(this.id)" id="change P">
+	<option>1</option>
+	<option>2</option>
+	<option selected>3</option>
+	<option>4</option>
+	<option>5</option>
+</select>
+</td>
+</tr>
+<tr>
+<th>dt</th>
+</tr>
+<tr>
+<th>[y(t)]</th>
+<th>=[C][x(t)]+[D][u(t)]</th>
+<th alight="right">q, number of outputs :</th>
+<td>
+<select onchange="changeQ(this.id)" id="change Q">
+	<option>1</option>
+	<option>2</option>
+	<option selected>3</option>
+	<option>4</option>
+	<option>5</option>
+</select>
+</td>
+</tr>
+<tr></tr>
+</table>
+
+<table border="0">
+<tr>
+<th align="center" rowspan="7">[A] = </th>
+<td>&#x250C</td>
+<td colspan="5"></td>
+<td>&#x2510</td>
+<th align="center" rowspan="7">[B] = </th>
+<td>&#x250C</td>
+<td colspan="5"></td>
+<td>&#x2510</td>
+<th align="center" rowspan="7">[C] = </th>
+<td>&#x250C</td>
+<td colspan="5"></td>
+<td>&#x2510</td>
+<th align="center" rowspan="7">[D] = </th>
+<td>&#x250C</td>
+<td colspan="5"></td>
+<td>&#x2510</td>
+<th align="center" rowspan="7">[x(t=0)] = </th>
+<td>&#x250C</td>
+<td colspan="1"></td>
+<td>&#x2510</td>
+<th align="center" rowspan="7">[u(t)] = </th>
+<td>&#x250C</td>
+<td>type</td>
+<td>gain</td>
+<td>start time</td>
+<td>ang freq</td>
+<td>&#x2510</td>
+<td>plot colour</td>
+</tr>
+<tr>
+<td>&#x2502</td>
+<td align="center" onmousedown="A[0][0]=changeMelement(this.id,n,n)" id="A11">1</td>
+<td align="center" onmousedown="A[0][1]=changeMelement(this.id,n,n)" id="A12">0</td>
+<td align="center" onmousedown="A[0][2]=changeMelement(this.id,n,n)" id="A13">0</td>
+<td align="center" onmousedown="A[0][3]=changeMelement(this.id,n,n)" id="A14">0</td>
+<td align="center" onmousedown="A[0][4]=changeMelement(this.id,n,n)" id="A15"></td>
+<td>&#x2502</td>
+<td>&#x2502</td>
+<td align="center" onmousedown="B[0][0]=changeMelement(this.id,n,p)" id="B11">1</td>
+<td align="center" onmousedown="B[0][1]=changeMelement(this.id,n,p)" id="B12">0</td>
+<td align="center" onmousedown="B[0][2]=changeMelement(this.id,n,p)" id="B13">0</td>
+<td align="center" onmousedown="B[0][3]=changeMelement(this.id,n,p)" id="B14"></td>
+<td align="center" onmousedown="B[0][4]=changeMelement(this.id,n,p)" id="B15"></td>
+<td>&#x2502</td>
+<td>&#x2502</td>
+<td align="center" onmousedown="C[0][0]=changeMelement(this.id,q,n)" id="C11">1</td>
+<td align="center" onmousedown="C[0][1]=changeMelement(this.id,q,n)" id="C12">0</td>
+<td align="center" onmousedown="C[0][2]=changeMelement(this.id,q,n)" id="C13">0</td>
+<td align="center" onmousedown="C[0][3]=changeMelement(this.id,q,n)" id="C14"></td>
+<td align="center" onmousedown="C[0][4]=changeMelement(this.id,q,n)" id="C15"></td>
+<td>&#x2502</td>
+<td>&#x2502</td>
+<td align="center" onmousedown="D[0][0]=changeMelement(this.id,q,p)" id="D11">1</td>
+<td align="center" onmousedown="D[0][1]=changeMelement(this.id,q,p)" id="D12">0</td>
+<td align="center" onmousedown="D[0][2]=changeMelement(this.id,q,p)" id="D13">0</td>
+<td align="center" onmousedown="D[0][3]=changeMelement(this.id,q,p)" id="D14"></td>
+<td align="center" onmousedown="D[0][4]=changeMelement(this.id,q,p)" id="D15"></td>
+<td>&#x2502</td>
+<td>&#x2502</td>
+<td align="center" onmousedown="X0[0][0]=changeMelement(this.id,n,1)" id="X011">1</td>
+<td>&#x2502</td>
+<td>&#x2502</td>
+<td>
+<select id="Udef11" onchange="Utype[0]=changeSelected(this.id)">
+   <option>impulse</option>
+   <option selected>step</option>
+   <option>ramp</option>
+   <option>sin</option>
+</select>
+</td>
+<td align="center" onmousedown="U[0][0]=changeMelement(this.id,n,3)" id="U11">0</td>
+<td align="center" onmousedown="U[0][1]=changeMelement(this.id,n,3)" id="U12">0</td>
+<td align="center" onmousedown="U[0][2]=changeMelement(this.id,n,3)" id="U13">0</td>
+<td>&#x2502</td>
+<td align="center"><input type="color" value="#FF0000" onchange="UCol[0]=this.value; changed = true" ></td>
+</tr>
+<tr>
+<td>&#x2502</td>
+<td align="center" onmousedown="A[1][0]=changeMelement(this.id,n,n)" id="A21">1</td>
+<td align="center" onmousedown="A[1][1]=changeMelement(this.id,n,n)" id="A22">0</td>
+<td align="center" onmousedown="A[1][2]=changeMelement(this.id,n,n)" id="A23">0</td>
+<td align="center" onmousedown="A[1][3]=changeMelement(this.id,n,n)" id="A24">0</td>
+<td align="center" onmousedown="A[1][4]=changeMelement(this.id,n,n)" id="A25"></td>
+<td>&#x2502</td>
+<td>&#x2502</td>
+<td align="center" onmousedown="B[1][0]=changeMelement(this.id,n,p)" id="B21">1</td>
+<td align="center" onmousedown="B[1][1]=changeMelement(this.id,n,p)" id="B22">0</td>
+<td align="center" onmousedown="B[1][2]=changeMelement(this.id,n,p)" id="B23">0</td>
+<td align="center" onmousedown="B[1][3]=changeMelement(this.id,n,p)" id="B24"></td>
+<td align="center" onmousedown="B[1][4]=changeMelement(this.id,n,p)" id="B25"></td>
+<td>&#x2502</td>
+<td>&#x2502</td>
+<td align="center" onmousedown="C[1][0]=changeMelement(this.id,q,n)" id="C21">1</td>
+<td align="center" onmousedown="C[1][1]=changeMelement(this.id,q,n)" id="C22">0</td>
+<td align="center" onmousedown="C[1][2]=changeMelement(this.id,q,n)" id="C23">0</td>
+<td align="center" onmousedown="C[1][3]=changeMelement(this.id,q,n)" id="C24"></td>
+<td align="center" onmousedown="C[1][4]=changeMelement(this.id,q,n)" id="C25"></td>
+<td>&#x2502</td>
+<td>&#x2502</td>
+<td align="center" onmousedown="D[1][0]=changeMelement(this.id,q,p)" id="D21">1</td>
+<td align="center" onmousedown="D[1][1]=changeMelement(this.id,q,p)" id="D22">0</td>
+<td align="center" onmousedown="D[1][2]=changeMelement(this.id,q,p)" id="D23">0</td>
+<td align="center" onmousedown="D[1][3]=changeMelement(this.id,q,p)" id="D24"></td>
+<td align="center" onmousedown="D[1][4]=changeMelement(this.id,q,p)" id="D25"></td>
+<td>&#x2502</td>
+<td>&#x2502</td>
+<td align="center" onmousedown="X0[1][0]=changeMelement(this.id,n,1)" id="X021">1</td>
+<td>&#x2502</td>
+<td>&#x2502</td>
+<td>
+<select id="Udef21" onchange="Utype[1]=changeSelected(this.id)">
+   <option>impulse</option>
+   <option selected>step</option>
+   <option>ramp</option>
+   <option>sin</option>
+</select>
+</td>
+<td align="center" onmousedown="U[1][0]=changeMelement(this.id,p,3)" id="U21">0</td>
+<td align="center" onmousedown="U[1][1]=changeMelement(this.id,p,3)" id="U22">0</td>
+<td align="center" onmousedown="U[1][2]=changeMelement(this.id,p,3)" id="U23">0</td>
+<td>&#x2502</td>
+<td align="center"><input type="color" value="#00FF00" onchange="UCol[1]=this.value; changed = true"></td>
+</tr>
+<tr>
+<td>&#x2502</td>
+<td align="center" onmousedown="A[2][0]=changeMelement(this.id,n,n)" id="A31">1</td>
+<td align="center" onmousedown="A[2][1]=changeMelement(this.id,n,n)" id="A32">0</td>
+<td align="center" onmousedown="A[2][2]=changeMelement(this.id,n,n)" id="A33">0</td>
+<td align="center" onmousedown="A[2][3]=changeMelement(this.id,n,n)" id="A34">0</td>
+<td align="center" onmousedown="A[2][4]=changeMelement(this.id,n,n)" id="A35"></td>
+<td>&#x2502</td>
+<td>&#x2502</td>
+<td align="center" onmousedown="B[2][0]=changeMelement(this.id,n,p)" id="B31">1</td>
+<td align="center" onmousedown="B[2][1]=changeMelement(this.id,n,p)" id="B32">0</td>
+<td align="center" onmousedown="B[2][2]=changeMelement(this.id,n,p)" id="B33">0</td>
+<td align="center" onmousedown="B[2][3]=changeMelement(this.id,n,p)" id="B34"></td>
+<td align="center" onmousedown="B[2][4]=changeMelement(this.id,n,p)" id="B35"></td>
+<td>&#x2502</td>
+<td>&#x2502</td>
+<td align="center" onmousedown="C[2][0]=changeMelement(this.id,q,n)" id="C31">1</td>
+<td align="center" onmousedown="C[2][1]=changeMelement(this.id,q,n)" id="C32">0</td>
+<td align="center" onmousedown="C[2][2]=changeMelement(this.id,q,n)" id="C33">0</td>
+<td align="center" onmousedown="C[2][3]=changeMelement(this.id,q,n)" id="C34"></td>
+<td align="center" onmousedown="C[2][4]=changeMelement(this.id,q,n)" id="C35"></td>
+<td>&#x2502</td>
+<td>&#x2502</td>
+<td align="center" onmousedown="D[2][0]=changeMelement(this.id,q,p)" id="D31">1</td>
+<td align="center" onmousedown="D[2][1]=changeMelement(this.id,q,p)" id="D32">0</td>
+<td align="center" onmousedown="D[2][2]=changeMelement(this.id,q,p)" id="D33">0</td>
+<td align="center" onmousedown="D[2][3]=changeMelement(this.id,q,p)" id="D34"></td>
+<td align="center" onmousedown="D[2][4]=changeMelement(this.id,q,p)" id="D35"></td>
+<td>&#x2502</td>
+<td>&#x2502</td>
+<td align="center" onmousedown="X0[2][0]=changeMelement(this.id,n,1)" id="X031">1</td>
+<td>&#x2502</td>
+<td>&#x2502</td>
+<td>
+<select id="Udef31" onchange="Utype[2]=changeSelected(this.id)"">
+   <option>impulse</option>
+   <option>step</option>
+   <option selected>ramp</option>
+   <option>sin</option>
+</select>
+</td>
+<td align="center" onmousedown="U[2][0]=changeMelement(this.id,p,3)" id="U31">0</td>
+<td align="center" onmousedown="U[2][1]=changeMelement(this.id,p,3)" id="U32">0</td>
+<td align="center" onmousedown="U[2][2]=changeMelement(this.id,p,3)" id="U33">0</td>
+<td>&#x2502</td>
+<td align="center"><input type="color" value="#000000" onchange="UCol[2]=this.value; changed = true"></td>
+</tr>
+<tr>
+<td>&#x2502</td>
+<td align="center" onmousedown="A[3][0]=changeMelement(this.id,n,n)" id="A41">1</td>
+<td align="center" onmousedown="A[3][1]=changeMelement(this.id,n,n)" id="A42">0</td>
+<td align="center" onmousedown="A[3][2]=changeMelement(this.id,n,n)" id="A43">0</td>
+<td align="center" onmousedown="A[3][3]=changeMelement(this.id,n,n)" id="A44">0</td>
+<td align="center" onmousedown="A[3][4]=changeMelement(this.id,n,n)" id="A45"></td>
+<td>&#x2502</td>
+<td>&#x2502</td>
+<td align="center" onmousedown="B[3][0]=changeMelement(this.id,n,p)" id="B41">1</td>
+<td align="center" onmousedown="B[3][1]=changeMelement(this.id,n,p)" id="B42">0</td>
+<td align="center" onmousedown="B[3][2]=changeMelement(this.id,n,p)" id="B43">0</td>
+<td align="center" onmousedown="B[3][3]=changeMelement(this.id,n,p)" id="B44"></td>
+<td align="center" onmousedown="B[3][4]=changeMelement(this.id,n,p)" id="B45"></td>
+<td>&#x2502</td>
+<td>&#x2502</td>
+<td align="center" onmousedown="C[3][0]=changeMelement(this.id,q,n)" id="C41">1</td>
+<td align="center" onmousedown="C[3][1]=changeMelement(this.id,q,n)" id="C42">0</td>
+<td align="center" onmousedown="C[3][2]=changeMelement(this.id,q,n)" id="C43">0</td>
+<td align="center" onmousedown="C[3][3]=changeMelement(this.id,q,n)" id="C44"></td>
+<td align="center" onmousedown="C[3][4]=changeMelement(this.id,q,n)" id="C45"></td>
+<td>&#x2502</td>
+<td>&#x2502</td>
+<td align="center" onmousedown="D[3][0]=changeMelement(this.id,q,p)" id="D41">1</td>
+<td align="center" onmousedown="D[3][1]=changeMelement(this.id,q,p)" id="D42">0</td>
+<td align="center" onmousedown="D[3][2]=changeMelement(this.id,q,p)" id="D43">0</td>
+<td align="center" onmousedown="D[3][3]=changeMelement(this.id,q,p)" id="D44"></td>
+<td align="center" onmousedown="D[3][4]=changeMelement(this.id,q,p)" id="D45"></td>
+<td>&#x2502</td>
+<td>&#x2502</td>
+<td align="center" onmousedown="X0[3][0]=changeMelement(this.id,n,1)" id="X041">1</td>
+<td>&#x2502</td>
+<td>&#x2502</td>
+<td>
+<select id="Udef41" onchange="Utype[3]=changeSelected(this.id)">
+   <option>impulse</option>
+   <option>step</option>
+   <option>ramp</option>
+   <option>sine</option>
+</select>
+</td>
+<td align="center" onmousedown="U[3][0]=changeMelement(this.id,p,3)" id="U41">0</td>
+<td align="center" onmousedown="U[3][1]=changeMelement(this.id,p,3)" id="U42">0</td>
+<td align="center" onmousedown="U[3][2]=changeMelement(this.id,p,3)" id="U43">0</td>
+<td>&#x2502</td>
+<td align="center"><input type="color" value="#000000" onchange="UCol[3]=this.value; changed = true"></td>
+</tr>
+<tr>
+<td>&#x2502</td>
+<td align="center" onmousedown="A[4][0]=changeMelement(this.id,n,n)" id="A51">1</td>
+<td align="center" onmousedown="A[4][1]=changeMelement(this.id,n,n)" id="A52">0</td>
+<td align="center" onmousedown="A[4][2]=changeMelement(this.id,n,n)" id="A53">0</td>
+<td align="center" onmousedown="A[4][3]=changeMelement(this.id,n,n)" id="A54">0</td>
+<td align="center" onmousedown="A[4][4]=changeMelement(this.id,n,n)" id="A55"></td>
+<td>&#x2502</td>
+<td>&#x2502</td>
+<td align="center" onmousedown="B[4][0]=changeMelement(this.id,n,p)" id="B51">1</td>
+<td align="center" onmousedown="B[4][1]=changeMelement(this.id,n,p)" id="B52">0</td>
+<td align="center" onmousedown="B[4][2]=changeMelement(this.id,n,p)" id="B53">0</td>
+<td align="center" onmousedown="B[4][3]=changeMelement(this.id,n,p)" id="B54"></td>
+<td align="center" onmousedown="B[4][4]=changeMelement(this.id,n,p)" id="B55"></td>
+<td>&#x2502</td>
+<td>&#x2502</td>
+<td align="center" onmousedown="C[4][0]=changeMelement(this.id,q,n)" id="C51">1</td>
+<td align="center" onmousedown="C[4][1]=changeMelement(this.id,q,n)" id="C52">0</td>
+<td align="center" onmousedown="C[4][2]=changeMelement(this.id,q,n)" id="C53">0</td>
+<td align="center" onmousedown="C[4][3]=changeMelement(this.id,q,n)" id="C54"></td>
+<td align="center" onmousedown="C[4][4]=changeMelement(this.id,q,n)" id="C55"></td>
+<td>&#x2502</td>
+<td>&#x2502</td>
+<td align="center" onmousedown="D[4][0]=changeMelement(this.id,q,p)" id="D51">1</td>
+<td align="center" onmousedown="D[4][1]=changeMelement(this.id,q,p)" id="D52">0</td>
+<td align="center" onmousedown="D[4][2]=changeMelement(this.id,q,p)" id="D53">0</td>
+<td align="center" onmousedown="D[4][3]=changeMelement(this.id,q,p)" id="D54"></td>
+<td align="center" onmousedown="D[4][4]=changeMelement(this.id,q,p)" id="D55"></td>
+<td>&#x2502</td>
+<td>&#x2502</td>
+<td align="center" onmousedown="X0[4][0]=changeMelement(this.id,n,1)" id="X051">1</td>
+<td>&#x2502</td>
+<td>&#x2502</td>
+<td>
+<select id="Udef51" onchange="Utype[4]=changeSelected(this.id)">
+   <option>impulse</option>
+   <option>step</option>
+   <option>ramp</option>
+   <option>sin</option>
+</select>
+</td>
+<td align="center" onmousedown="U[4][0]=changeMelement(this.id,p,3)" id="U51">0</td>
+<td align="center" onmousedown="U[4][1]=changeMelement(this.id,p,3)" id="U52">0</td>
+<td align="center" onmousedown="U[4][2]=changeMelement(this.id,p,3)" id="U53">0</td>
+<td>&#x2502</td>
+<td align="center"><input type="color" value="#000000" onchange="UCol[4]=this.value; changed = true"></td>
+</tr>
+<tr>
+<td>&#x2514</td>
+<td colspan="5"></td>
+<td>&#x2518</td>
+<td>&#x2514</td>
+<td colspan="5"></td>
+<td>&#x2518</td>
+<td>&#x2514</td>
+<td colspan="5"></td>
+<td>&#x2518</td>
+<td>&#x2514</td>
+<td colspan="5"></td>
+<td>&#x2518</td>
+<td>&#x2514</td>
+<td colspan="1"></td>
+<td>&#x2518</td>
+<td>&#x2514</td>
+<td colspan="4"></td>
+<td>&#x2518</td>
+</tr>
+</table>
+<table>
+<tr><td>System inputs u(t)</td></tr>
+<tr><td><canvas id="cvU" width="800" height="200"></canvas></td></tr>
+<tr><td>System states x(t)</td></tr>
+<tr><td><canvas id="cvX" width="800" height="200"></canvas></td></tr>
+<tr><td>System outputs y(t)</td></tr>
+<tr><td><canvas id="cvY" width="800" height="200"></canvas></td></tr>
+</table> 
+
+<script type="text/javascript">
+
+mDraw(A,"A",5,5);
+mDraw(B,"B",5,5);
+mDraw(C,"C",5,5);
+mDraw(D,"D",5,5);
+mDraw(X0,"X0",5,1);
+mDraw(U,"U",5,3);
+ssEvaluate();
+  
+
+
+function getUatt(Ugain,Utype,t,h)
+{
+var Uatt=new Array();
+for (i=0;Ugain[i]!=null;i++) {
+	Uatt[i]=new Array();
+	tOffset=t-Ugain[i][1];
+	if (tOffset<0){Uatt[i][0]=0;}
+	else {
+		switch (Utype[i]) {
+			case "impulse":
+			if (tOffset<=h){Uatt[i][0]=Ugain[i][0]/h;}
+			else {Uatt[i][0]=0;}
+			break;
+
+			case "step":
+			Uatt[i][0]=Ugain[i][0];
+			break;
+
+			case "ramp":
+			Uatt[i][0]=Ugain[i][0]*tOffset;
+			break;
+
+			case "sin":
+			Uatt[i][0]=Ugain[i][0]*Math.sin(Ugain[i][2]*tOffset);
+			break;
+			}
+		}
+	}
+return Uatt
+}
+
+function changeSelected(HTMLid)
+{
+sel=getListItem(HTMLid);
+changed=true;
+return sel
+}
+
+function changeN(HTMLid)
+{
+n=changeSelected(HTMLid)
+A=mResize(A,n,n);
+mDraw(A,"A",5,5);
+B=mResize(B,n,p);
+mDraw(B,"B",5,5);
+C=mResize(C,q,n);
+mDraw(C,"C",5,5);
+X0=mResize(X0,n,1);
+mDraw(X0,"X0",5,1);
+}
+
+
+function changeP(HTMLid)
+{
+p=changeSelected(HTMLid)
+B=mResize(B,n,p);
+mDraw(B,"B",5,5);
+D=mResize(D,q,p);
+mDraw(D,"D",5,5);
+U=mResize(U,p,3);
+mDraw(U,"U",5,3);
+
+for (i=0;i<5;i++) {
+	if (i<p) {if (Utype[i]==null) {Utype[i]="step";};} else {Utype[i]=null;}
+	}
+
+}
+
+function changeQ(HTMLid)
+{
+q=changeSelected(HTMLid)
+C=mResize(C,q,n);
+mDraw(C,"C",5,5);
+D=mResize(D,q,p);
+mDraw(D,"D",5,5);
+}
+
+
+function getListItem(HTMLid)
+{
+var x=document.getElementById(HTMLid).selectedIndex;
+var y=document.getElementById(HTMLid).options;
+return y[x].text;
+}
+
+
+function updateIfChanged()
+{
+if (changed) {
+	ssEvaluate();
+	};
+changed=false;
+}
+
+function changeMelement(HTMLid,Rmax,Cmax)
+{
+i=HTMLid.substr(-2,1);
+j=HTMLid.substr(-1,1);
+if (i<=Rmax && j<=Cmax) {
+	variable=changeNumber(HTMLid);
+	}
+return variable}
+
+function changeNumber(HTMLid)
+{
+variable=document.getElementById(HTMLid).innerHTML
+promptString="Please enter ";
+var input=prompt(promptString.concat(HTMLid),variable.toString());
+if (input!=null)
+	{variable=eval(input);}
+document.getElementById(HTMLid).innerHTML=variable;
+changed=true;
+return variable}
+
+function ssEvaluate()
+{
+var Xn=new Array ();
+var Yn= new Array ();
+var Un= new Array ();
+var Tn= new Array ();
+var Yt= new Array();
+var Ut= new Array();
+var Xt =new Array();
+
+var t = 0;
+var i=0;
+
+for (j=0;j<p;j++) {
+	Ut[j]=new Array();
+	Un[j]=new Array();
+	}
+for (j=0;j<n;j++) {
+	Xt[j]=new Array();
+	Xn[j]=new Array();
+	Xt[j][0]=X0[j][0];
+	}
+for (j=0;j<q;j++) {
+	Yt[j]=new Array();
+	Yn[j]=new Array();
+	}
+
+Ut=getUatt(U,Utype,0,h);
+Yt=ss(X0,Ut,C,D);
+
+while (t<=tend) {
+	Tn[i]=t;
+	for (j=0;j<n;j++) {
+		Xn[j][i]=Xt[j][0];
+	}
+	for (j=0;j<p;j++) {
+		Un[j][i]=Ut[j][0];
+	}
+	for (j=0;j<q;j++) {
+		Yn[j][i]=Yt[j][0];
+	}
+	
+	i++;
+	t=t+h;
+	Ut=getUatt(U,Utype,t,h);
+	Xt=ssInteg(Xt,Ut,t,h,iMethod);
+	Yt=ss(Xt,Ut,C,D);
+}
+plotXY(Tn,Un,"cvU",UCol);
+plotXY(Tn,Xn,"cvX",UCol);
+plotXY(Tn,Yn,"cvY",UCol);
+}
+
+function ss(X,U,A,B)
+{return mAdd(mMult(A,X),mMult(B,U))}
+
+function ssInteg(Xt,Ut,t,h,imeth)
+{
+	switch (imeth) {
+	case "euler":
+		var Xss=ss(Xt,Ut,A,B);
+		var Xk=mScalarMult(Xss,h);
+		var X=mAdd(Xt,Xk);
+		break;
+	case "heun":
+		K1=ss(Xt,Ut,A,B);
+		X=mAdd(Xt,mScalarMult(K1,h));
+		Uth=getUatt(U,Utype,(t+h),h);
+		K2=ss(X,Uth,A,B);
+		X=mAdd(Xt,mScalarMult(mAdd(K1,K2),h/2));
+		break;
+	case "kutta3":
+		K1=ss(Xt,Ut,A,B);
+		X=mAdd(Xt,mScalarMult(K1,h/2));
+		Uth=getUatt(U,Utype,(t+h/2),h);
+		K2=ss(X,Uth,A,B);
+		K3=mAdd(mScalarMult(K1,-1),mScalarMult(K2,2));
+		X=mAdd(Xt,mScalarMult(K3,h));
+		Uth=getUatt(U,Utype,(t+h),h);
+		K3=ss(X,Uth,A,B);
+		X=mAdd(Xt,mScalarMult(mAdd(K1,mAdd(mScalarMult(K2,4),K3)),h/6));
+		break;
+	case "rk4":
+		K1=ss(Xt,Ut,A,B);
+		X=mAdd(Xt,mScalarMult(K1,h/2));
+		Uth=getUatt(U,Utype,(t+h/2),h);
+		K2=ss(X,Uth,A,B);
+		X=mAdd(Xt,mScalarMult(K2,h/2));
+		K3=ss(X,Uth,A,B);
+		X=mAdd(Xt,mScalarMult(K3,h));
+		Uth=getUatt(U,Utype,(t+h),h);
+		K4=ss(X,Uth,A,B);
+		X=mAdd(Xt,mScalarMult(mAdd(K1,mAdd(mScalarMult(K2,2),mAdd(mScalarMult(K3,2),K4))),h/6));
+
+	case "kutta 3/8":
+		K1=ss(Xt,Ut,A,B);
+		X=mAdd(Xt,mScalarMult(K1,h/3));
+		Uth=getUatt(U,Utype,(t+h/3),h);
+		K2=ss(X,Uth,A,B);
+		X=mAdd(Xt,mAdd(mScalarMult(K1,-h/3),mScalarMult(K2,h)));
+		Uth=getUatt(U,Utype,(t+2*h/3),h);
+		K3=ss(X,Uth,A,B);
+		X=mAdd(Xt,mScalarMult(mAdd(mSub(K1,K2),K3),h));
+		Uth=getUatt(U,Utype,(t+h),h);
+		K4=ss(X,Uth,A,B);
+		X=mAdd(Xt,mScalarMult(mAdd(K1,mAdd(mScalarMult(K2,3),mAdd(mScalarMult(K3,3),K4))),h/8));
+	}
+return X
+}
+
+function ssWrite() {
+var ssObject = { "A":A, "B":B, "C":C,"D":D,"X0":X0,"n":n,"p":p,"q":q };
+var ssJSON = JSON.stringify(ssObject);
+localStorage.setItem("model", ssJSON);
+}
+
+function ssRead(){
+var ssJSON = localStorage.getItem("model");
+var ssObject = JSON.parse(ssJSON);
+A=ssObject.A;
+B=ssObject.B;
+C=ssObject.C;
+D=ssObject.D;
+X0=ssObject.X0;
+n=ssObject.n;
+p=ssObject.p;
+q=ssObject.q;
+mDraw(A,"A",5,5);
+mDraw(B,"B",5,5);
+mDraw(C,"C",5,5);
+mDraw(D,"D",5,5);
+mDraw(X0,"X0",5,1);
+mDraw(U,"U",5,3);
+ssEvaluate();
+}
+
+</script>
+</body>
+</html>
+
+
